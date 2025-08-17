@@ -3,8 +3,6 @@
 from bs4 import BeautifulSoup
 import argparse
 import datetime
-import feedparser
-import hashlib
 import jwt
 import os
 import requests
@@ -182,41 +180,6 @@ class GhostNewsletterSender:
             print(f"Error fetching post from Ghost API: {e}")
             return None
 
-    def get_latest_post(self, feed_url=None):
-        """Fetch the latest post - prioritize Ghost API, fallback to RSS"""
-        # Try Ghost API first
-        ghost_post = self.get_latest_post_from_ghost()
-        if ghost_post:
-            return ghost_post
-        
-        # Fallback to RSS if provided
-        if feed_url:
-            print("⚠️ Falling back to RSS feed...")
-            return self.get_latest_post_from_rss(feed_url)
-        
-        return None
-
-    def get_latest_post_from_rss(self, feed_url):
-        """Fetch the latest post from RSS feed (fallback method)"""
-    def get_latest_post_from_rss(self, feed_url):
-        """Fetch the latest post from RSS feed (fallback method)"""
-        try:
-            feed = feedparser.parse(feed_url)
-            
-            if feed.bozo:
-                print("Error parsing feed:", feed.bozo_exception)
-                return None
-                
-            if not feed.entries:
-                print("No entries found in the feed.")
-                return None
-            
-            return feed.entries[0]
-            
-        except Exception as e:
-            print(f"Error fetching RSS feed: {e}")
-            return None
-
     def load_template(self):
         """Load and return the HTML email template"""
         try:
@@ -316,38 +279,27 @@ class GhostNewsletterSender:
     def render_template(self, template, post):
         """Render the email template with post data"""
         try:
-            # Handle both Ghost API posts and RSS entries
-            if isinstance(post, dict) and 'html' in post:
-                # Ghost API post object
-                post_content = post.get('html', '')
-                post_title = post.get('title', 'Untitled')
-                post_url = post.get('url', '')
-                post_excerpt = post.get('excerpt', '')
-                featured_image = post.get('feature_image', '')
-                published_at = post.get('published_at', '')
-                
-                # Build full URL if needed
-                if post_url and not post_url.startswith('http'):
-                    post_url = f"{self.ghost_website_url}{post_url}"
-                
-                # Format published date
-                if published_at:
-                    try:
-                        from datetime import datetime
-                        dt = datetime.fromisoformat(published_at.replace('Z', '+00:00'))
-                        formatted_date = dt.strftime("%B %d, %Y")
-                    except:
-                        formatted_date = datetime.now().strftime("%B %d, %Y")
-                else:
+            # Handle Ghost API post object
+            post_content = post.get('html', '')
+            post_title = post.get('title', 'Untitled')
+            post_url = post.get('url', '')
+            post_excerpt = post.get('excerpt', '')
+            featured_image = post.get('feature_image', '')
+            published_at = post.get('published_at', '')
+            
+            # Build full URL if needed
+            if post_url and not post_url.startswith('http'):
+                post_url = f"{self.ghost_website_url}{post_url}"
+            
+            # Format published date
+            if published_at:
+                try:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(published_at.replace('Z', '+00:00'))
+                    formatted_date = dt.strftime("%B %d, %Y")
+                except:
                     formatted_date = datetime.datetime.now().strftime("%B %d, %Y")
-                    
             else:
-                # RSS feed entry (fallback)
-                post_content = getattr(post, 'summary', '')
-                post_title = getattr(post, 'title', 'Untitled')
-                post_url = getattr(post, 'link', '')
-                post_excerpt = post_content[:150] + '...' if len(post_content) > 150 else post_content
-                featured_image = ''
                 formatted_date = datetime.datetime.now().strftime("%B %d, %Y")
             
             # Process content
@@ -453,23 +405,20 @@ class GhostNewsletterSender:
             print(f"Failed to send email to {to_addr}. Error: {e}")
             return False
 
-    def send_newsletter(self, feed_url, dry_run=True):
+    def send_newsletter(self, dry_run=True):
         """Main function to send newsletter"""
         try:
             print("🚀 Starting Ghost newsletter sender...")
             
             # Get latest post
             print("📰 Fetching latest post...")
-            latest_post = self.get_latest_post(feed_url)
+            latest_post = self.get_latest_post_from_ghost()
             if not latest_post:
                 print("No post found. Exiting.")
                 return False
             
-            # Get post title for display (handle both Ghost API and RSS)
-            if isinstance(latest_post, dict):
-                post_title = latest_post.get('title', 'Untitled')
-            else:
-                post_title = getattr(latest_post, 'title', 'Untitled')
+            # Get post title for display
+            post_title = latest_post.get('title', 'Untitled')
             
             print(f"Found post: {post_title}")
             
@@ -541,8 +490,7 @@ def main():
     """Main function"""
     try:
         # Setup argument parser
-        parser = argparse.ArgumentParser(description='Send newsletter using Ghost API and optionally RSS feed.')
-        parser.add_argument('--feed', type=str, required=False, help='RSS Feed URL (fallback if Ghost API fails)')
+        parser = argparse.ArgumentParser(description='Send newsletter using Ghost API.')
         parser.add_argument('--send', action='store_true', help='Send to all subscribers (default is dry run)')
         
         args = parser.parse_args()
@@ -551,7 +499,7 @@ def main():
         sender = GhostNewsletterSender()
         
         # Send newsletter
-        success = sender.send_newsletter(args.feed, dry_run=not args.send)
+        success = sender.send_newsletter(dry_run=not args.send)
         
         if success:
             print("🎉 Newsletter sent successfully!")
