@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <title>{{blog_title}}</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        body {
+            background-color: #fff;
+            font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            font-size: 18px;
+            line-height: 0;
+            margin: 0;
+            padding: 0;
+            -ms-text-size-adjust: 100%;
+            -webkit-text-size-adjust: 100%;
+            color: #15212A;
+        }
+    </style>
+</head>
+<body style="background-color: #fff; font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; font-size: 18px; line-height: 0; margin: 0; padding: 0; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; color: #15212A;">
+    
+    <!-- Preview Text -->
+    <div style="display: none; font-size: 1px; color: #fefefe; line-height: 1px; font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
+        {{newsletter_preview}}
+    </div>
+    
+    <!-- Main Table -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0; padding: 0; width: 100%; height: 100%;">
+        <tr>
+            <td style="padding: 0; background-color: #fff;" align="center" valign="top">
+                
+                <!-- Content Container -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; width: 100%; max-width: 600px; background-color: #ffffff;">
+                    
+                    <!-- Header Image -->
+                    <tr>
+                        <td style="padding: 0; text-align: center;" align="center">
+                            <img src="https://brunoamaral.eu/content/images/2025/08/IMG_8250-4.jpeg" border="0" width="600" alt="Header Image" style="border: none; -ms-interpolation-mode: bicubic; max-width: 100%; display: block; width: 100%; height: auto;">
+                        </td>
+                    </tr>
+                    
+                    <!-- Header Section -->
+                    <tr>
+                        <td style="padding: 32px 40px 32px; text-align: center;" align="center">
+                            
+                            <!-- Site Icon -->
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
+                                <tbody><tr>
+                                    <td class="site-icon" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 18px; vertical-align: top; color: #15212A; padding-bottom: 8px; padding-top: 8px; text-align: center; border-radius: 3px;" valign="top" align="center">
+                                        <a href="{{blog_logo}}" style="color: #2b546d; text-decoration: none; overflow-wrap: anywhere;" target="_blank">
+                                            <img src="https://brunoamaral.eu/content/images/2025/08/bruno-1.png" alt="{{blog_title}}" border="0" width="44" height="44" style="border: none; -ms-interpolation-mode: bicubic; max-width: 100%; width: 44px; height: 44px; border-radius: 3px;">
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="site-url site-url-bottom-padding" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; vertical-align: top; color: #15212A; font-size: 16px; letter-spacing: -0.1px; font-weight: 700; text-transform: uppercase; text-align: center; padding-bottom: 12px;" valign="top" align="center">
+                                        <div style="width: 100% !important;">
+                                            <a href="{{blog_logo}}" class="site-title" style="text-decoration: none; color: #15212A; overflow-wrap: anywhere;" target="_blank">{{blog_title}}</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody></table>
+                            
+                            <!-- Newsletter Title -->
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
+                                <tbody><tr>
+                                    <td style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; vertical-align: top; font-size: 36px; line-height: 1.1; font-weight: 700; text-align: center; color: #000000; margin-top: 32px;" valign="top" align="center">
+                                        <div style="display: block; margin-top: 32px; text-align: center; line-height: 1.1em; overflow-wrap: anywhere; color: #000000;">
+                                            {{featured_title}}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody></table>
+                            
+                            <!-- Post Excerpt -->
+                            {{#if_featured_excerpt}}
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
+                                <tbody><tr>
+                                    <td style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; vertical-align: top; padding: 16px 40px 24px 40px; text-align: center;" valign="top" align="center">
+                                        <p style="margin: 0; font-size: 20px; font-weight: 400; line-height: 1.6; text-align: center; color: #495057; letter-spacing: -0.01em; margin-bottom: 0;">{{featured_excerpt}}</p>
+                                    </td>
+                                </tr>
+                            </tbody></table>
+                            {{/if_featured_excerpt}}
+                            
+                            <!-- Post Meta -->
+                            <table class="post-meta-wrapper" role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%; padding-bottom: 32px; padding-top: 16px;">
+                                <tbody><tr>
+                                    <td height="20" class="post-meta post-meta-center" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; vertical-align: top; color: #15212a; color: rgba(0, 0, 0, 0.6); font-size: 13px; font-weight: 400; text-align: center; padding: 0;" valign="top" align="center">
+                                        By {{blog_title}} • <span class="post-meta-date" style="white-space: nowrap;">{{newsletter_date}}</span>
+                                    </td>
+                                </tr>
+                                <tr class="post-meta post-meta-center view-online-mobile" style="color: #15212a; color: rgba(0, 0, 0, 0.6); font-size: 13px; font-weight: 400; text-align: center;" align="center">
+                                    <td height="20" class="view-online" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; vertical-align: top; color: #15212a; color: rgba(0, 0, 0, 0.6); font-size: 13px; font-weight: 400; text-align: center; text-decoration: underline;" valign="top" align="center">
+                                        <a href="{{featured_url}}" class="view-online-link" style="word-wrap: none; white-space: nowrap; color: #15212a; color: rgba(0, 0, 0, 0.6); overflow-wrap: anywhere; text-decoration: underline;" target="_blank">View in browser</a>
+                                    </td>
+                                </tr>
+                            </tbody></table>
+                            
+                        </td>
+                    </tr>
+                    
+                    <!-- Featured Image -->
+                    {{#if featured_image}}
+                    <tr>
+                        <td style="padding: 40px 40px 0; text-align: center;" align="center">
+                            <img src="{{featured_image}}" border="0" alt="Feature image" style="border: none; -ms-interpolation-mode: bicubic; max-width: 100%; display: block; width: 100%; height: auto; margin: 0 auto;">
+                        </td>
+                    </tr>
+                    {{#if_featured_image_caption}}
+                    <tr>
+                        <td style="padding: 8px 40px 32px; text-align: center; color: #738a94; font-size: 13px; font-style: italic;" align="center">
+                            {{featured_image_caption}}
+                        </td>
+                    </tr>
+                    {{/if_featured_image_caption}}
+                    {{/if}}
+                    
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 40px; color: #15212A;">
+                            
+                            <!-- Featured Post Content -->
+                            {{{featured_content}}}
+                            
+                        </td>
+                    </tr>
+                    
+                    <!-- Feedback Buttons -->
+                    <tr>
+                        <td class="feedback-buttons-container" dir="ltr" width="100%" align="center" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 18px; vertical-align: top; color: #15212A; padding: 32px 0 24px; border-bottom: 1px solid #e0e7eb; text-align: center; background-color: #ffffff;" valign="top" bgcolor="#ffffff">
+                            <table class="feedback-buttons" role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; margin: auto; width: 100%;" width="100%">
+                                <tbody><tr>
+                                    <td dir="ltr" valign="top" align="center" style="font-size: 18px; color: #15212A; display: inline-block; vertical-align: top; font-family: inherit; text-align: center; padding: 0 4px 4px; cursor: pointer; width: 30%;" width="30%">
+                                        <a href="{{feedback_more_url}}" target="_blank" style="color: #2b546d; text-decoration: none; overflow-wrap: anywhere;">
+                                            <img src="https://static.ghost.org/v5.0.0/images/more-like-this-mobile.png" border="0" width="42" height="42" alt="More like this" style="border: none; -ms-interpolation-mode: bicubic; max-width: 100%; display: block; margin: 0 auto; vertical-align: middle;">
+                                            <p class="feedback-button-text" style="display: inline-block; font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #15212A; font-weight: 500; margin: 1em 0 0 0; line-height: 1.4em; word-break: break-word; font-size: 13px;">More like this</p>
+                                        </a>
+                                    </td>
+                                    <td dir="ltr" valign="top" align="center" style="font-size: 18px; color: #15212A; display: inline-block; vertical-align: top; font-family: inherit; text-align: center; padding: 0 4px 4px; cursor: pointer; width: 30%;" width="30%">
+                                        <a href="{{feedback_less_url}}" target="_blank" style="color: #2b546d; text-decoration: none; overflow-wrap: anywhere;">
+                                            <img src="https://static.ghost.org/v5.0.0/images/less-like-this-mobile.png" border="0" width="42" height="42" alt="Less like this" style="border: none; -ms-interpolation-mode: bicubic; max-width: 100%; display: block; margin: 0 auto; vertical-align: middle;">
+                                            <p class="feedback-button-text" style="display: inline-block; font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #15212A; font-weight: 500; margin: 1em 0 0 0; line-height: 1.4em; word-break: break-word; font-size: 13px;">Less like this</p>
+                                        </a>
+                                    </td>
+                                    <td dir="ltr" valign="top" align="center" style="font-size: 18px; color: #15212A; display: inline-block; vertical-align: top; font-family: inherit; text-align: center; padding: 0 4px 4px; cursor: pointer; width: 30%;" width="30%">
+                                        <a href="{{comment_url}}" target="_blank" style="color: #2b546d; text-decoration: none; overflow-wrap: anywhere;">
+                                            <img src="https://static.ghost.org/v5.0.0/images/comment-mobile.png" border="0" width="42" height="42" alt="Comment" style="border: none; -ms-interpolation-mode: bicubic; max-width: 100%; display: block; margin: 0 auto; vertical-align: middle;">
+                                            <p class="feedback-button-text" style="display: inline-block; font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #15212A; font-weight: 500; margin: 1em 0 0 0; line-height: 1.4em; word-break: break-word; font-size: 13px;">Comment</p>
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody></table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Additional Posts Section -->
+                    <tr>
+                        <td class="latest-posts-container" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 18px; vertical-align: top; color: #15212A; padding: 24px 0; border-bottom: 1px solid #e0e7eb;" valign="top">
+                            <h3 class="latest-posts-header" style="margin-top: 0; line-height: 1.11em; text-rendering: optimizeLegibility; margin: 0; padding: 8px 0 8px; color: #15212A; font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase;">Keep reading</h3>
+                            {{{additional_posts_content}}}
+                        </td>
+                    </tr>
+                    
+                    <!-- Subscription Details -->
+                    <tr>
+                        <td class="subscription-box" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 18px; vertical-align: top; padding: 32px 0; border-bottom: 1px solid #e0e7eb; color: #15212A;" valign="top">
+                            <h3 style="margin-top: 0; line-height: 1.11em; text-rendering: optimizeLegibility; font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; text-transform: uppercase; margin: 0 0 18px; color: #15212A;">Subscription details</h3>
+                            
+                            <p style="margin: 0 0 1.5em 0; font-size: 15px; font-weight: 400; line-height: 1.45em; margin-bottom: 16px; color: #15212A;">
+                                You are receiving this because you are a subscriber to {{blog_title}}.
+                            </p>
+                            
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 0; width: 100%;">
+                                <tr>
+                                    <td style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 15px; color: #15212A; padding: 4px 0; line-height: 1.45em;">
+                                        <strong>Name:</strong> {{member_name}}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 15px; color: #15212A; padding: 4px 0; line-height: 1.45em;">
+                                        <strong>Email:</strong> {{member_email}}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 15px; color: #15212A; padding: 4px 0 16px 0; line-height: 1.45em;">
+                                        <strong>Member since:</strong> {{member_created_at}}
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 0; font-size: 15px; font-weight: 400; line-height: 1.45em; color: #15212A;">
+                                <a href="{{manage_subscription_url}}" style="color: #007bff; text-decoration: none; font-weight: 500;">Manage subscription</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+                
+            </td>
+        </tr>
+    </table>
+    
+</body>
+</html>
