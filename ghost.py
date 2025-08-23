@@ -182,6 +182,304 @@ class GhostNewsletterSender:
             print(f"Warning: Error fetching blog settings: {e}")
             return {}
 
+    def get_comprehensive_branding_settings(self):
+        """Fetch comprehensive branding and design settings from Ghost API"""
+        try:
+            token = self.generate_ghost_jwt()
+            if not token:
+                print("❌ Could not generate JWT token")
+                return None
+            
+            headers = {
+                'Authorization': f'Ghost {token}',
+                'Content-Type': 'application/json',
+                'Accept-Version': 'v5.0'
+            }
+            
+            # Fetch all settings
+            print("🔍 Fetching all Ghost settings...")
+            url = f"{self.ghost_admin_url}/ghost/api/admin/settings/"
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code != 200:
+                print(f"❌ Could not fetch settings: {response.status_code} - {response.text}")
+                return None
+            
+            settings_data = response.json()
+            all_settings = settings_data.get('settings', [])
+            
+            # Categorize settings related to branding and design
+            branding_keys = [
+                # Basic branding
+                'title', 'description', 'logo', 'icon', 'cover_image',
+                # Brand colors and design
+                'accent_color', 'brand_color', 'brand', 'brand_primary_color',
+                # Navigation and appearance
+                'navigation', 'secondary_navigation', 'header_style',
+                # Social media
+                'facebook', 'twitter', 'linkedin', 'instagram', 'youtube',
+                'social_accounts', 'twitter_url', 'facebook_url',
+                # Meta and SEO
+                'meta_title', 'meta_description', 'og_image', 'og_title', 'og_description',
+                'twitter_image', 'twitter_title', 'twitter_description',
+                # Ghost-specific design
+                'theme', 'theme_config', 'custom_theme_settings',
+                # Portal/membership styling
+                'portal_button', 'portal_button_style', 'portal_button_signup_text',
+                'portal_button_icon', 'portal_plans', 'portal_products',
+                # Email branding
+                'email_header_image', 'email_footer', 'email_design',
+                # Site-wide settings
+                'site_language', 'timezone', 'default_locale',
+                # Custom settings
+                'codeinjection_head', 'codeinjection_foot', 'custom_css'
+            ]
+            
+            # Extract all settings and categorize them
+            branding_settings = {}
+            other_settings = {}
+            
+            for setting in all_settings:
+                key = setting.get('key')
+                value = setting.get('value')
+                
+                if key in branding_keys:
+                    branding_settings[key] = value
+                else:
+                    other_settings[key] = value
+            
+            # Print organized results
+            print("\n🎨 BRANDING & DESIGN SETTINGS FOUND:")
+            print("=" * 50)
+            
+            categories = {
+                'Basic Branding': ['title', 'description', 'logo', 'icon', 'cover_image'],
+                'Colors & Theme': ['accent_color', 'brand_color', 'brand', 'brand_primary_color', 'theme', 'theme_config'],
+                'Navigation': ['navigation', 'secondary_navigation', 'header_style'],
+                'Social Media': ['facebook', 'twitter', 'linkedin', 'instagram', 'youtube', 'social_accounts', 'twitter_url', 'facebook_url'],
+                'SEO & Meta': ['meta_title', 'meta_description', 'og_image', 'og_title', 'og_description', 'twitter_image', 'twitter_title', 'twitter_description'],
+                'Portal/Membership': ['portal_button', 'portal_button_style', 'portal_button_signup_text', 'portal_button_icon', 'portal_plans', 'portal_products'],
+                'Email Design': ['email_header_image', 'email_footer', 'email_design'],
+                'Customization': ['codeinjection_head', 'codeinjection_foot', 'custom_css', 'custom_theme_settings']
+            }
+            
+            for category, keys in categories.items():
+                category_settings = {k: branding_settings.get(k) for k in keys if k in branding_settings}
+                if category_settings:
+                    print(f"\n📂 {category}:")
+                    for key, value in category_settings.items():
+                        if value:
+                            if isinstance(value, str) and len(value) > 100:
+                                print(f"  • {key}: {value[:97]}...")
+                            else:
+                                print(f"  • {key}: {value}")
+                        else:
+                            print(f"  • {key}: (empty)")
+            
+            print(f"\n📊 SUMMARY:")
+            print(f"  • Total settings found: {len(all_settings)}")
+            print(f"  • Branding-related settings: {len(branding_settings)}")
+            print(f"  • Settings with values: {len([k for k, v in branding_settings.items() if v])}")
+            
+            # Also check if there are any other potentially relevant settings
+            potential_branding = [k for k in other_settings.keys() if any(word in k.lower() for word in ['color', 'style', 'design', 'brand', 'theme', 'css', 'image', 'logo', 'icon'])]
+            if potential_branding:
+                print(f"\n🔍 OTHER POTENTIALLY RELEVANT SETTINGS:")
+                for key in potential_branding[:10]:  # Show first 10
+                    value = other_settings[key]
+                    if isinstance(value, str) and len(value) > 50:
+                        print(f"  • {key}: {value[:47]}...")
+                    else:
+                        print(f"  • {key}: {value}")
+                if len(potential_branding) > 10:
+                    print(f"  ... and {len(potential_branding) - 10} more")
+            
+            return {
+                'branding_settings': branding_settings,
+                'all_settings': {s.get('key'): s.get('value') for s in all_settings},
+                'total_count': len(all_settings)
+            }
+            
+        except Exception as e:
+            print(f"❌ Error fetching comprehensive branding settings: {e}")
+            return None
+
+    def get_theme_information(self):
+        """Fetch theme-specific information from Ghost API"""
+        try:
+            token = self.generate_ghost_jwt()
+            if not token:
+                print("❌ Could not generate JWT token")
+                return None
+            
+            headers = {
+                'Authorization': f'Ghost {token}',
+                'Content-Type': 'application/json',
+                'Accept-Version': 'v5.0'
+            }
+            
+            print("🎭 Fetching theme information...")
+            
+            # Try to fetch themes endpoint
+            themes_url = f"{self.ghost_admin_url}/ghost/api/admin/themes/"
+            themes_response = requests.get(themes_url, headers=headers)
+            
+            theme_info = {}
+            
+            if themes_response.status_code == 200:
+                themes_data = themes_response.json()
+                themes = themes_data.get('themes', [])
+                
+                print(f"\n🎭 THEMES INFORMATION:")
+                print("=" * 40)
+                print(f"Found {len(themes)} theme(s):")
+                
+                for theme in themes:
+                    name = theme.get('name', 'Unknown')
+                    active = theme.get('active', False)
+                    version = theme.get('package', {}).get('version', 'Unknown')
+                    status = "🟢 ACTIVE" if active else "⚪ Inactive"
+                    
+                    print(f"  • {name} (v{version}) {status}")
+                    
+                    if active:
+                        theme_info['active_theme'] = {
+                            'name': name,
+                            'version': version,
+                            'package': theme.get('package', {}),
+                            'templates': theme.get('templates', [])
+                        }
+                        
+                        # Show templates if available
+                        templates = theme.get('templates', [])
+                        if templates:
+                            print(f"    Templates: {', '.join(templates[:5])}{'...' if len(templates) > 5 else ''}")
+            else:
+                print(f"⚠️  Could not fetch themes: {themes_response.status_code}")
+            
+            # Try to fetch site information
+            site_url = f"{self.ghost_admin_url}/ghost/api/admin/site/"
+            site_response = requests.get(site_url, headers=headers)
+            
+            if site_response.status_code == 200:
+                site_data = site_response.json()
+                site_info = site_data.get('site', {})
+                
+                print(f"\n🌐 SITE INFORMATION:")
+                print("=" * 40)
+                print(f"  • URL: {site_info.get('url', 'Unknown')}")
+                print(f"  • Version: {site_info.get('version', 'Unknown')}")
+                
+                theme_info['site_info'] = site_info
+            else:
+                print(f"⚠️  Could not fetch site info: {site_response.status_code}")
+                
+            return theme_info
+            
+        except Exception as e:
+            print(f"❌ Error fetching theme information: {e}")
+            return None
+
+    def analyze_branding_capabilities(self):
+        """Analyze and summarize all available branding capabilities"""
+        print("🎨 GHOST API BRANDING & DESIGN CAPABILITIES ANALYSIS")
+        print("=" * 60)
+        
+        print("\n📋 WHAT THE GHOST API PROVIDES FOR BRANDING:")
+        
+        branding_data = self.get_comprehensive_branding_settings()
+        if not branding_data:
+            print("❌ Could not fetch branding data")
+            return
+            
+        branding_settings = branding_data.get('branding_settings', {})
+        
+        # Analyze what's available vs what's configured
+        capabilities = {
+            '🏷️ Basic Identity': {
+                'title': branding_settings.get('title'),
+                'description': branding_settings.get('description'),
+                'logo': branding_settings.get('logo'),
+                'icon': branding_settings.get('icon'),
+                'cover_image': branding_settings.get('cover_image')
+            },
+            '🎨 Visual Design': {
+                'accent_color': branding_settings.get('accent_color'),
+                'brand_color': branding_settings.get('brand_color'),
+                'theme': branding_settings.get('active_theme', 'Not accessible via settings')
+            },
+            '🧭 Navigation & UX': {
+                'navigation': branding_settings.get('navigation'),
+                'secondary_navigation': branding_settings.get('secondary_navigation'),
+                'portal_button_style': branding_settings.get('portal_button_style'),
+                'portal_button_signup_text': branding_settings.get('portal_button_signup_text')
+            },
+            '📱 Social Media': {
+                'facebook': branding_settings.get('facebook'),
+                'twitter': branding_settings.get('twitter'),
+                'instagram': branding_settings.get('instagram'),
+                'linkedin': branding_settings.get('linkedin')
+            },
+            '🔍 SEO & Sharing': {
+                'meta_title': branding_settings.get('meta_title'),
+                'meta_description': branding_settings.get('meta_description'),
+                'og_image': branding_settings.get('og_image'),
+                'twitter_image': branding_settings.get('twitter_image')
+            },
+            '🔧 Customization': {
+                'codeinjection_head': branding_settings.get('codeinjection_head'),
+                'codeinjection_foot': branding_settings.get('codeinjection_foot'),
+                'custom_css': branding_settings.get('custom_css')
+            }
+        }
+        
+        for category, items in capabilities.items():
+            print(f"\n{category}:")
+            configured_count = 0
+            total_count = len(items)
+            
+            for key, value in items.items():
+                status = "✅" if value else "⚪"
+                if value and isinstance(value, str) and len(value) > 60:
+                    value_display = value[:57] + "..."
+                else:
+                    value_display = value or "(not configured)"
+                    
+                print(f"  {status} {key}: {value_display}")
+                if value:
+                    configured_count += 1
+            
+            print(f"    → {configured_count}/{total_count} configured")
+        
+        # Theme information
+        print(f"\n🎭 THEME INFORMATION:")
+        theme_data = self.get_theme_information()
+        if theme_data and 'site_info' in theme_data:
+            site_info = theme_data['site_info']
+            print(f"  • Ghost Version: {site_info.get('version', 'Unknown')}")
+            print(f"  • Site URL: {site_info.get('url', 'Unknown')}")
+            
+        print(f"\n💡 SUMMARY:")
+        total_settings = branding_data.get('total_count', 0)
+        branding_count = len(branding_settings)
+        configured_count = len([v for v in branding_settings.values() if v])
+        
+        print(f"  • Total Ghost settings: {total_settings}")
+        print(f"  • Branding-related: {branding_count}")
+        print(f"  • Currently configured: {configured_count}")
+        print(f"  • Configuration completeness: {configured_count/branding_count*100:.1f}%")
+        
+        print(f"\n🚀 RECOMMENDATIONS FOR NEWSLETTER BRANDING:")
+        print("  • ✅ Basic identity (title, logo, description) is well configured")
+        if not branding_settings.get('accent_color'):
+            print("  • ⚠️  Consider setting an accent color for brand consistency")
+        if not branding_settings.get('meta_title'):
+            print("  • ⚠️  Add meta title and description for better SEO")
+        if not branding_settings.get('facebook') and not branding_settings.get('twitter'):
+            print("  • ⚠️  Add social media links to increase engagement")
+            
+        return branding_data
+
     def detect_optimal_interval(self):
         """Auto-detect optimal newsletter interval based on posting frequency"""
         try:
@@ -564,11 +862,30 @@ class GhostNewsletterSender:
             print(f"Error processing posts for template: {e}")
             return []
 
-    def generate_newsletter_data(self, posts, blog_settings, newsletter_interval='weekly'):
+    def generate_newsletter_data(self, posts, blog_settings, newsletter_interval='weekly', branding_settings=None):
         """Generate complete newsletter data structure for template"""
         try:
             # Process posts
             processed_posts = self.process_posts_for_template(posts)
+            
+            # Get branding settings with defaults
+            if branding_settings is None:
+                branding_settings = {}
+            
+            # Extract branding colors with fallbacks
+            accent_color = branding_settings.get('accent_color', '#2b546d')  # Your current accent color as fallback
+            brand_color = branding_settings.get('brand_color', accent_color)  # Use accent color if no brand color set
+            
+            # Extract other branding elements
+            site_logo = branding_settings.get('logo', blog_settings.get('logo', ''))
+            site_icon = branding_settings.get('icon', blog_settings.get('icon', ''))
+            cover_image = branding_settings.get('cover_image', blog_settings.get('cover_image', ''))
+            
+            print(f"🎨 Using branding colors - Accent: {accent_color}, Brand: {brand_color}")
+            if accent_color != '#2b546d':
+                print(f"  ℹ️  Custom accent color detected: {accent_color}")
+            if brand_color and brand_color != accent_color:
+                print(f"  ℹ️  Secondary brand color: {brand_color}")
             
             # Generate newsletter date
             now = datetime.now()
@@ -586,7 +903,9 @@ class GhostNewsletterSender:
             newsletter_data = {
                 'blog': {
                     'title': blog_settings.get('title', self.from_name),
-                    'logo': blog_settings.get('logo', ''),
+                    'logo': site_logo,
+                    'icon': site_icon,
+                    'cover_image': cover_image,
                     'description': blog_settings.get('description', ''),
                     'unsubscribe': '{{unsubscribe_url}}',  # Will be replaced per email
                     'post': processed_posts,
@@ -598,6 +917,16 @@ class GhostNewsletterSender:
                     'date': formatted_date,
                     'archive_url': f"{self.ghost_website_url}/newsletters" if self.ghost_website_url else "",
                     'social_sharing': self.generate_social_sharing_data(processed_posts)
+                },
+                'branding': {
+                    'accent_color': accent_color,
+                    'brand_color': brand_color,
+                    'primary_color': accent_color,  # Alias for template compatibility
+                    'secondary_color': brand_color,  # Alias for template compatibility
+                    'text_color': '#15212A',  # Default Ghost text color
+                    'light_text_color': '#738a94',  # Default Ghost light text color
+                    'background_color': '#ffffff',  # Default background
+                    'border_color': '#e0e7eb'  # Default Ghost border color
                 }
             }
             
@@ -905,6 +1234,16 @@ class GhostNewsletterSender:
                 'social_linkedin_url': newsletter_data['newsletter']['social_sharing'].get('linkedin_url', ''),
                 'newsletter_archive_url': newsletter_data['newsletter'].get('archive_url', ''),
                 
+                # Branding and colors from Ghost API
+                'accent_color': newsletter_data['branding']['accent_color'],
+                'brand_color': newsletter_data['branding']['brand_color'],
+                'primary_color': newsletter_data['branding']['primary_color'],
+                'secondary_color': newsletter_data['branding']['secondary_color'],
+                'text_color': newsletter_data['branding']['text_color'],
+                'light_text_color': newsletter_data['branding']['light_text_color'],
+                'background_color': newsletter_data['branding']['background_color'],
+                'border_color': newsletter_data['branding']['border_color'],
+                
                 # Add feedback URLs using original post data
                 **self.generate_feedback_urls(featured_original_post),
             }
@@ -1077,13 +1416,18 @@ class GhostNewsletterSender:
                 print("No posts found. Exiting.")
                 return False
             
-            # Get blog settings
-            print("⚙️ Fetching blog settings...")
+            # Get blog settings and branding
+            print("⚙️ Fetching blog settings and branding...")
             blog_settings = self.get_blog_settings_from_ghost()
+            
+            # Get comprehensive branding settings for styling
+            print("🎨 Fetching branding settings for dynamic styling...")
+            branding_data = self.get_comprehensive_branding_settings()
+            branding_settings = branding_data.get('branding_settings', {}) if branding_data else {}
             
             # Generate newsletter data
             print("📊 Generating newsletter data structure...")
-            newsletter_data = self.generate_newsletter_data(recent_posts, blog_settings, self.newsletter_interval)
+            newsletter_data = self.generate_newsletter_data(recent_posts, blog_settings, self.newsletter_interval, branding_settings)
             if not newsletter_data:
                 print("Failed to generate newsletter data. Exiting.")
                 return False
@@ -1147,7 +1491,8 @@ class GhostNewsletterSender:
                     personal_content = email_content.replace('{{unsubscribe_url}}', unsubscribe_link)
                     
                     # Send email
-                    email_subject = f"{newsletter_data['newsletter']['interval'].capitalize()} Newsletter: {featured_post_title}"
+                    newsletter_name = f"{newsletter_data['blog']['title']}"
+                    email_subject = f"{newsletter_name}: {featured_post_title}"
                     if self.send_email(email_addr, personal_content, email_subject):
                         sent_count += 1
                         print(f"Sent to {email_addr}")
@@ -1186,6 +1531,11 @@ def main():
         parser.add_argument('--featured-only', action='store_true', help='Include only featured posts')
         parser.add_argument('--filter-tags', nargs='+', help='Filter posts by tags (space-separated list)')
         
+        # Testing and debugging options
+        parser.add_argument('--check-branding', action='store_true', help='Check available branding and design settings from Ghost API')
+        parser.add_argument('--check-theme', action='store_true', help='Check theme information from Ghost API')
+        parser.add_argument('--analyze-branding', action='store_true', help='Comprehensive analysis of branding capabilities and recommendations')
+        
         args = parser.parse_args()
         
         # Create newsletter sender with configuration
@@ -1197,6 +1547,31 @@ def main():
             featured_only=args.featured_only,
             auto_interval=args.auto_interval
         )
+        
+        # Check branding settings if requested
+        if args.check_branding:
+            print("🎨 Checking Ghost API branding and design settings...")
+            branding_data = sender.get_comprehensive_branding_settings()
+            if branding_data:
+                print("\n✅ Branding check completed successfully!")
+            else:
+                print("\n❌ Failed to fetch branding settings")
+            sys.exit(0)
+            
+        # Check theme information if requested
+        if args.check_theme:
+            print("🎭 Checking Ghost API theme information...")
+            theme_data = sender.get_theme_information()
+            if theme_data:
+                print("\n✅ Theme check completed successfully!")
+            else:
+                print("\n❌ Failed to fetch theme information")
+            sys.exit(0)
+            
+        # Analyze branding capabilities if requested
+        if args.analyze_branding:
+            sender.analyze_branding_capabilities()
+            sys.exit(0)
         
         # Send newsletter
         success = sender.send_newsletter(dry_run=not args.send)
