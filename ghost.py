@@ -304,6 +304,67 @@ class GhostNewsletterSender:
             print(f"❌ Error fetching comprehensive branding settings: {e}")
             return None
 
+    def get_newsletter_settings(self):
+        """Fetch newsletter-specific configuration from Ghost API"""
+        try:
+            token = self.generate_ghost_jwt()
+            if not token:
+                print("❌ Could not generate JWT token")
+                return None
+            
+            headers = {
+                'Authorization': f'Ghost {token}',
+                'Content-Type': 'application/json',
+                'Accept-Version': 'v5.0'
+            }
+            
+            # Fetch newsletters
+            print("📰 Fetching newsletter configuration...")
+            newsletters_url = f"{self.ghost_admin_url}/ghost/api/admin/newsletters/"
+            response = requests.get(newsletters_url, headers=headers)
+            
+            if response.status_code != 200:
+                print(f"❌ Could not fetch newsletters: {response.status_code}")
+                return None
+            
+            newsletters_data = response.json()
+            newsletters = newsletters_data.get('newsletters', [])
+            
+            # Find active newsletter
+            active_newsletter = None
+            for newsletter in newsletters:
+                if newsletter.get('status') == 'active':
+                    active_newsletter = newsletter
+                    break
+            
+            if not active_newsletter:
+                print("⚠️ No active newsletter found")
+                return None
+            
+            # Also get email settings from site settings
+            settings_url = f"{self.ghost_admin_url}/ghost/api/admin/settings/"
+            settings_response = requests.get(settings_url, headers=headers)
+            
+            email_settings = {}
+            if settings_response.status_code == 200:
+                all_settings = settings_response.json().get('settings', [])
+                email_keys = [
+                    'email_track_opens', 'email_track_clicks', 'default_email_address',
+                    'support_email_address', 'heading_font', 'body_font'
+                ]
+                for setting in all_settings:
+                    if setting.get('key') in email_keys:
+                        email_settings[setting.get('key')] = setting.get('value')
+            
+            return {
+                'newsletter': active_newsletter,
+                'email_settings': email_settings
+            }
+            
+        except Exception as e:
+            print(f"Error fetching newsletter settings: {e}")
+            return None
+
     def get_theme_information(self):
         """Fetch theme-specific information from Ghost API"""
         try:
@@ -599,7 +660,7 @@ class GhostNewsletterSender:
         return {
             'feedback_more_url': f"{base_url}/#/feedback/{post_id}/1/?uuid={feedback_uuid}&key={feedback_key}",
             'feedback_less_url': f"{base_url}/#/feedback/{post_id}/0/?uuid={feedback_uuid}&key={feedback_key}",
-            'comment_url': f"{base_url}/p/{post_slug}/#ghost-comments"
+            'comment_url': f"{base_url}/{post_slug}/#ghost-comments-root"
         }
 
     def get_recent_posts_from_ghost(self, max_posts=5, days_back=30):
@@ -705,6 +766,17 @@ class GhostNewsletterSender:
             ('if_additional_posts', len(template_data.get('posts', [])) > 1),
             ('if_social_sharing', bool(template_data.get('social_twitter_url'))),
             ('if_newsletter_archive', bool(template_data.get('newsletter_archive_url'))),
+            # New newsletter-specific conditionals
+            ('newsletter.header_image', bool(template_data.get('newsletter', {}).get('header_image'))),
+            ('newsletter.settings.show_header_icon', template_data.get('newsletter', {}).get('settings', {}).get('show_header_icon', True)),
+            ('newsletter.settings.show_header_title', template_data.get('newsletter', {}).get('settings', {}).get('show_header_title', True)),
+            ('newsletter.settings.show_feature_image', template_data.get('newsletter', {}).get('settings', {}).get('show_feature_image', True)),
+            ('newsletter.settings.show_excerpt', template_data.get('newsletter', {}).get('settings', {}).get('show_excerpt', True)),
+            ('newsletter.settings.show_author', template_data.get('newsletter', {}).get('settings', {}).get('show_author', False)),
+            ('newsletter.settings.show_latest_posts', template_data.get('newsletter', {}).get('settings', {}).get('show_latest_posts', True)),
+            ('newsletter.settings.show_subscription_details', template_data.get('newsletter', {}).get('settings', {}).get('show_subscription_details', True)),
+            ('newsletter.settings.footer_content', bool(template_data.get('newsletter', {}).get('settings', {}).get('footer_content'))),
+            ('email.support_address', bool(template_data.get('email', {}).get('support_address'))),
         ]
         
         rendered = template
@@ -868,6 +940,9 @@ class GhostNewsletterSender:
             # Process posts
             processed_posts = self.process_posts_for_template(posts)
             
+            # Get newsletter-specific settings
+            newsletter_config = self.get_newsletter_settings()
+            
             # Get branding settings with defaults
             if branding_settings is None:
                 branding_settings = {}
@@ -886,6 +961,44 @@ class GhostNewsletterSender:
                 print(f"  ℹ️  Custom accent color detected: {accent_color}")
             if brand_color and brand_color != accent_color:
                 print(f"  ℹ️  Secondary brand color: {brand_color}")
+            
+            # Get newsletter-specific configuration
+            newsletter_settings = {}
+            email_settings = {}
+            header_image = None
+            sender_name = self.from_name
+            
+            if newsletter_config:
+                active_newsletter = newsletter_config.get('newsletter', {})
+                email_settings = newsletter_config.get('email_settings', {})
+                
+                # Extract newsletter-specific settings
+                newsletter_settings = {
+                    'header_image': active_newsletter.get('header_image'),
+                    'show_header_icon': active_newsletter.get('show_header_icon', True),
+                    'show_header_title': active_newsletter.get('show_header_title', True),
+                    'show_feature_image': active_newsletter.get('show_feature_image', True),
+                    'show_excerpt': active_newsletter.get('show_excerpt', True),
+                    'show_author': active_newsletter.get('show_author'),
+                    'footer_content': active_newsletter.get('footer_content'),
+                    'sender_name': active_newsletter.get('sender_name'),
+                    'sender_email': active_newsletter.get('sender_email'),
+                    'subject_prefix': active_newsletter.get('subject_prefix'),
+                    'title_font_category': active_newsletter.get('title_font_category', 'sans_serif'),
+                    'body_font_category': active_newsletter.get('body_font_category', 'sans_serif'),
+                    'title_alignment': active_newsletter.get('title_alignment', 'center'),
+                    'background_color': active_newsletter.get('background_color', 'light')
+                }
+                
+                header_image = newsletter_settings.get('header_image')
+                if newsletter_settings.get('sender_name'):
+                    sender_name = newsletter_settings.get('sender_name')
+                
+                print(f"📰 Newsletter settings applied:")
+                print(f"  • Header image: {header_image or 'None'}")
+                print(f"  • Sender name: {sender_name}")
+                print(f"  • Font: {newsletter_settings.get('title_font_category')}")
+                print(f"  • Background: {newsletter_settings.get('background_color')}")
             
             # Generate newsletter date
             now = datetime.now()
@@ -916,7 +1029,16 @@ class GhostNewsletterSender:
                     'interval': newsletter_interval,
                     'date': formatted_date,
                     'archive_url': f"{self.ghost_website_url}/newsletters" if self.ghost_website_url else "",
-                    'social_sharing': self.generate_social_sharing_data(processed_posts)
+                    'social_sharing': self.generate_social_sharing_data(processed_posts),
+                    'sender_name': sender_name,
+                    'header_image': header_image,
+                    'settings': newsletter_settings
+                },
+                'email': {
+                    'track_opens': email_settings.get('email_track_opens', True),
+                    'track_clicks': email_settings.get('email_track_clicks', True),
+                    'default_address': email_settings.get('default_email_address'),
+                    'support_address': email_settings.get('support_email_address')
                 },
                 'branding': {
                     'accent_color': accent_color,
@@ -1204,6 +1326,7 @@ class GhostNewsletterSender:
             
             # Template data for the new system
             template_data = {
+                # Legacy compatibility variables
                 'blog_title': newsletter_data['blog']['title'],
                 'blog_logo': newsletter_data['blog']['logo'],
                 'newsletter_interval': newsletter_data['newsletter']['interval'],
@@ -1220,6 +1343,45 @@ class GhostNewsletterSender:
                 'additional_posts_content': additional_posts_html,
                 'unsubscribe_url': '{{unsubscribe_url}}',  # Will be replaced per email
                 'posts': posts,  # For conditionals
+                
+                # Flat template variables for compatibility
+                'blog.title': newsletter_data['blog']['title'],
+                'blog.logo': newsletter_data['blog']['logo'],
+                'blog.icon': newsletter_data['blog']['icon'],
+                'blog.website_url': newsletter_data['blog']['website_url'],
+                'blog.description': newsletter_data['blog']['description'],
+                'newsletter.header_image': newsletter_data['newsletter']['header_image'],
+                'newsletter.sender_name': newsletter_data['newsletter']['sender_name'],
+                'newsletter.settings.show_header_icon': newsletter_data['newsletter']['settings'].get('show_header_icon', True),
+                'newsletter.settings.show_header_title': newsletter_data['newsletter']['settings'].get('show_header_title', True),
+                'newsletter.settings.show_feature_image': newsletter_data['newsletter']['settings'].get('show_feature_image', True),
+                'newsletter.settings.show_excerpt': newsletter_data['newsletter']['settings'].get('show_excerpt', True),
+                'newsletter.settings.show_author': newsletter_data['newsletter']['settings'].get('show_author', False),
+                'newsletter.settings.show_latest_posts': newsletter_data['newsletter']['settings'].get('show_latest_posts', True),
+                'newsletter.settings.show_subscription_details': newsletter_data['newsletter']['settings'].get('show_subscription_details', True),
+                'newsletter.settings.footer_content': newsletter_data['newsletter']['settings'].get('footer_content', ''),
+                'email.support_address': newsletter_data['email']['support_address'],
+                
+                # New structured data for template
+                'blog': {
+                    'title': newsletter_data['blog']['title'],
+                    'logo': newsletter_data['blog']['logo'],
+                    'icon': newsletter_data['blog']['icon'],
+                    'website_url': newsletter_data['blog']['website_url'],
+                    'description': newsletter_data['blog']['description']
+                },
+                'newsletter': {
+                    'interval': newsletter_data['newsletter']['interval'],
+                    'date': newsletter_data['newsletter']['date'],
+                    'sender_name': newsletter_data['newsletter']['sender_name'],
+                    'header_image': newsletter_data['newsletter']['header_image'],
+                    'settings': newsletter_data['newsletter']['settings']
+                },
+                'email': {
+                    'track_opens': newsletter_data['email']['track_opens'],
+                    'track_clicks': newsletter_data['email']['track_clicks'],
+                    'support_address': newsletter_data['email']['support_address']
+                },
                 
                 # Member/Subscription details (with fallback for debug)
                 'member_name': 'Jamie Larson',  # Sample data for debug
@@ -1251,9 +1413,86 @@ class GhostNewsletterSender:
             # Apply conditional rendering
             rendered = self.render_conditional_template(template, template_data)
             
-            # Replace template variables
+            # Debug: Print template data structure
+            print(f"🐛 Template data keys: {list(template_data.keys())}")
+            if 'newsletter' in template_data:
+                print(f"🐛 Newsletter data: {template_data['newsletter']}")
+            if 'blog' in template_data:
+                print(f"🐛 Blog data: {template_data['blog']}")
+            if 'email' in template_data:
+                print(f"🐛 Email data: {template_data['email']}")
+            
+            # Helper function to handle nested object references
+            def replace_nested_template_vars(text, data, prefix=''):
+                """Replace template variables including nested objects"""
+                import re
+                
+                # Handle simple conditionals first ({{#if variable}})
+                if_pattern = r'\{\{#if\s+([^}]+)\}\}(.*?)\{\{/if\}\}'
+                
+                def process_conditional(match):
+                    condition = match.group(1).strip()
+                    content = match.group(2)
+                    
+                    # Evaluate condition from nested data
+                    value = get_nested_value(data, condition)
+                    return content if value else ''
+                
+                # Replace conditionals
+                text = re.sub(if_pattern, process_conditional, text, flags=re.DOTALL)
+                
+                # Handle nested object references like {{blog.title}}, {{newsletter.settings.show_header_icon}}
+                for key, value in data.items():
+                    current_path = f"{prefix}.{key}" if prefix else key
+                    
+                    if isinstance(value, dict):
+                        # Recursively handle nested objects
+                        text = replace_nested_template_vars(text, value, current_path)
+                    else:
+                        # Replace the template variable
+                        placeholder = '{{' + current_path + '}}'
+                        text = text.replace(placeholder, str(value) if value is not None else '')
+                
+                return text
+            
+            def get_nested_value(data, path):
+                """Get value from nested object using dot notation"""
+                try:
+                    keys = path.split('.')
+                    value = data
+                    for key in keys:
+                        if isinstance(value, dict) and key in value:
+                            value = value[key]
+                        else:
+                            return False
+                    return bool(value) if value is not None else False
+                except:
+                    return False
+            
+            # Replace nested template variables
+            rendered = replace_nested_template_vars(rendered, template_data)
+            
+            # Debug: Check if key variables were replaced
+            if 'https://brunoamaral.eu/content/images/2025/08/IMG_8250-4.jpeg' in rendered:
+                print("✅ Header image was successfully replaced")
+            else:
+                print("❌ Header image replacement failed")
+                # Check if the placeholder is still there
+                if '{{newsletter.header_image}}' in rendered:
+                    print("🐛 Template still contains: {{newsletter.header_image}}")
+            
+            if 'bruno-1.png' in rendered:
+                print("✅ Blog icon was successfully replaced")
+            else:
+                print("❌ Blog icon replacement failed")
+                if '{{blog.icon}}' in rendered:
+                    print("🐛 Template still contains: {{blog.icon}}")
+            
+            # Replace template variables (legacy compatibility)
             for key, value in template_data.items():
                 if key == 'posts':  # Skip the posts array used for conditionals
+                    continue
+                if isinstance(value, dict):  # Skip nested objects (already handled above)
                     continue
                     
                 if key in ['featured_content', 'additional_posts_content']:
@@ -1533,6 +1772,7 @@ def main():
         
         # Testing and debugging options
         parser.add_argument('--check-branding', action='store_true', help='Check available branding and design settings from Ghost API')
+        parser.add_argument('--check-newsletter', action='store_true', help='Check newsletter configuration and design settings from Ghost API')
         parser.add_argument('--check-theme', action='store_true', help='Check theme information from Ghost API')
         parser.add_argument('--analyze-branding', action='store_true', help='Comprehensive analysis of branding capabilities and recommendations')
         
@@ -1556,6 +1796,46 @@ def main():
                 print("\n✅ Branding check completed successfully!")
             else:
                 print("\n❌ Failed to fetch branding settings")
+            sys.exit(0)
+            
+        # Check newsletter settings if requested
+        if args.check_newsletter:
+            print("📰 Checking Ghost newsletter configuration...")
+            newsletter_data = sender.get_newsletter_settings()
+            if newsletter_data:
+                print("\n📰 NEWSLETTER CONFIGURATION:")
+                print("=" * 50)
+                
+                newsletter = newsletter_data.get('newsletter', {})
+                email_settings = newsletter_data.get('email_settings', {})
+                
+                print(f"\n📧 Active Newsletter:")
+                print(f"  • Name: {newsletter.get('name')}")
+                print(f"  • Sender: {newsletter.get('sender_name')} <{newsletter.get('sender_email')}>")
+                print(f"  • Reply-to: {newsletter.get('sender_reply_to')}")
+                
+                print(f"\n🎨 Design Settings:")
+                print(f"  • Header image: {newsletter.get('header_image') or 'None'}")
+                print(f"  • Title font: {newsletter.get('title_font_category')}")
+                print(f"  • Body font: {newsletter.get('body_font_category')}")
+                print(f"  • Title alignment: {newsletter.get('title_alignment')}")
+                print(f"  • Background: {newsletter.get('background_color')}")
+                
+                print(f"\n📝 Content Settings:")
+                print(f"  • Show header icon: {newsletter.get('show_header_icon')}")
+                print(f"  • Show header title: {newsletter.get('show_header_title')}")
+                print(f"  • Show feature image: {newsletter.get('show_feature_image')}")
+                print(f"  • Show excerpt: {newsletter.get('show_excerpt')}")
+                print(f"  • Show author: {newsletter.get('show_author')}")
+                print(f"  • Footer content: {newsletter.get('footer_content') or 'None'}")
+                
+                print(f"\n⚙️ Email Settings:")
+                for key, value in email_settings.items():
+                    print(f"  • {key}: {value}")
+                
+                print("\n✅ Newsletter configuration check completed!")
+            else:
+                print("\n❌ Failed to fetch newsletter settings")
             sys.exit(0)
             
         # Check theme information if requested

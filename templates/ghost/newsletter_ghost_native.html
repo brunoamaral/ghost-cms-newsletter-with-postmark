@@ -46,33 +46,39 @@
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="margin: 0 auto; width: 100%; max-width: 600px; background-color: #ffffff;">
                     
                     <!-- Header Image -->
+                    {{#if newsletter.header_image}}
                     <tr>
                         <td style="padding: 0; text-align: center;" align="center">
-                            <img src="https://brunoamaral.eu/content/images/2025/08/IMG_8250-4.jpeg" border="0" width="600" alt="Header Image" style="border: none; -ms-interpolation-mode: bicubic; max-width: 100%; display: block; width: 100%; height: auto;">
+                            <img src="{{newsletter.header_image}}" border="0" width="600" alt="{{blog.title}} Newsletter Header" style="border: none; -ms-interpolation-mode: bicubic; max-width: 100%; display: block; width: 100%; height: auto;">
                         </td>
                     </tr>
+                    {{/if}}
                     
                     <!-- Header Section -->
                     <tr>
                         <td style="padding: 32px 40px 32px; text-align: center;" align="center">
                             
                             <!-- Site Icon -->
+                            {{#if newsletter.settings.show_header_icon}}
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
                                 <tbody><tr>
                                     <td class="site-icon" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 18px; vertical-align: top; color: #15212A; padding-bottom: 8px; padding-top: 8px; text-align: center; border-radius: 3px;" valign="top" align="center">
-                                        <a href="{{blog_logo}}" style="color: {{accent_color}}; text-decoration: none; overflow-wrap: anywhere;" target="_blank">
-                                            <img src="https://brunoamaral.eu/content/images/2025/08/bruno-1.png" alt="{{blog_title}}" border="0" width="44" height="44" style="border: none; -ms-interpolation-mode: bicubic; max-width: 100%; width: 44px; height: 44px; border-radius: 3px;">
+                                        <a href="{{blog.website_url}}" style="color: {{accent_color}}; text-decoration: none; overflow-wrap: anywhere;" target="_blank">
+                                            <img src="{{blog.icon}}" alt="{{blog.title}}" border="0" width="44" height="44" style="border: none; -ms-interpolation-mode: bicubic; max-width: 100%; width: 44px; height: 44px; border-radius: 3px;">
                                         </a>
                                     </td>
                                 </tr>
+                                {{#if newsletter.settings.show_header_title}}
                                 <tr>
                                     <td class="site-url site-url-bottom-padding" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; vertical-align: top; color: #15212A; font-size: 16px; letter-spacing: -0.1px; font-weight: 700; text-transform: uppercase; text-align: center; padding-bottom: 12px;" valign="top" align="center">
                                         <div style="width: 100% !important;">
-                                            <a href="{{blog_logo}}" class="site-title" style="text-decoration: none; color: #15212A; overflow-wrap: anywhere;" target="_blank">{{blog_title}}</a>
+                                            <a href="{{blog.website_url}}" class="site-title" style="text-decoration: none; color: #15212A; overflow-wrap: anywhere;" target="_blank">{{blog.title}}</a>
                                         </div>
                                     </td>
                                 </tr>
+                                {{/if}}
                             </tbody></table>
+                            {{/if}}
                             
                             <!-- Newsletter Title -->
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
@@ -168,21 +174,31 @@
                     </tr>
                     
                     <!-- Additional Posts Section -->
+                    {{#if newsletter.settings.show_latest_posts}}
                     <tr>
                         <td class="latest-posts-container" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 18px; vertical-align: top; color: #15212A; padding: 24px 0; border-bottom: 1px solid #e0e7eb;" valign="top">
                             <h3 class="latest-posts-header" style="margin-top: 0; line-height: 1.11em; text-rendering: optimizeLegibility; margin: 0; padding: 8px 0 8px; color: #15212A; font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase;">Keep reading</h3>
                             {{{additional_posts_content}}}
                         </td>
                     </tr>
+                    {{/if}}
                     
                     <!-- Subscription Details -->
+                    {{#if newsletter.settings.show_subscription_details}}
                     <tr>
                         <td class="subscription-box" style="font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 18px; vertical-align: top; padding: 32px 0; border-bottom: 1px solid #e0e7eb; color: #15212A;" valign="top">
                             <h3 style="margin-top: 0; line-height: 1.11em; text-rendering: optimizeLegibility; font-family: Inter, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; text-transform: uppercase; margin: 0 0 18px; color: #15212A;">Subscription details</h3>
                             
                             <p style="margin: 0 0 1.5em 0; font-size: 15px; font-weight: 400; line-height: 1.45em; margin-bottom: 16px; color: #15212A;">
-                                You are receiving this because you are a subscriber to {{blog_title}}.
+                                You are receiving this because you are a subscriber to {{blog.title}}.
                             </p>
+                            
+                            <!-- Custom Footer Content -->
+                            {{#if newsletter.settings.footer_content}}
+                            <div style="margin: 16px 0; font-size: 15px; font-weight: 400; line-height: 1.45em; color: #15212A;">
+                                {{{newsletter.settings.footer_content}}}
+                            </div>
+                            {{/if}}
                             
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 0; width: 100%;">
                                 <tr>
@@ -204,9 +220,14 @@
                             
                             <p style="margin: 0; font-size: 15px; font-weight: 400; line-height: 1.45em; color: #15212A;">
                                 <a href="{{manage_subscription_url}}" style="color: {{accent_color}}; text-decoration: none; font-weight: 500;">Manage subscription</a>
+                                {{#if email.support_address}}
+                                &nbsp;•&nbsp;
+                                <a href="mailto:{{email.support_address}}" style="color: {{accent_color}}; text-decoration: none; font-weight: 500;">Contact support</a>
+                                {{/if}}
                             </p>
                         </td>
                     </tr>
+                    {{/if}}
                     
                 </table>
                 
