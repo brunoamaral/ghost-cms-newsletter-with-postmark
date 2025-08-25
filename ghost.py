@@ -1731,7 +1731,7 @@ class GhostNewsletterSender:
                     
                     # Send email
                     newsletter_name = f"{newsletter_data['blog']['title']}"
-                    email_subject = f"{newsletter_name}: {featured_post_title}"
+                    email_subject = f"{featured_post_title}"
                     if self.send_email(email_addr, personal_content, email_subject):
                         sent_count += 1
                         print(f"Sent to {email_addr}")
