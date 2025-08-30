@@ -1208,6 +1208,7 @@ class GhostNewsletterSender:
                     'website_url': self.ghost_website_url
                 },
                 'newsletter': {
+                    'name': active_newsletter.get('name', self.from_name) if newsletter_config else self.from_name,
                     'interval': newsletter_interval,
                     'date': formatted_date,
                     'archive_url': f"{self.ghost_website_url}/newsletters" if self.ghost_website_url else "",
@@ -2061,8 +2062,14 @@ class GhostNewsletterSender:
                     personal_content = personal_content.replace('{{unsubscribe_url}}', unsubscribe_link)
                     
                     # Send email
-                    newsletter_name = f"{newsletter_data['blog']['title']}"
-                    email_subject = f"{newsletter_name}: {featured_post_title}"
+                    # Use newsletter name instead of blog title, with optional subject prefix
+                    newsletter_name = newsletter_data['newsletter']['name']
+                    subject_prefix = newsletter_data['newsletter']['settings'].get('subject_prefix')
+                    
+                    if subject_prefix:
+                        email_subject = f"{subject_prefix} {newsletter_name}: {featured_post_title}"
+                    else:
+                        email_subject = f"{newsletter_name}: {featured_post_title}"
                     if self.send_email(member_email, personal_content, email_subject):
                         sent_count += 1
                         print(f"Sent to {member_email} ({member.get('name', 'Unknown')})")
