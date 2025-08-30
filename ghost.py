@@ -665,8 +665,12 @@ class GhostNewsletterSender:
         
         return filtered_posts
 
-    def enhance_post_images(self, posts):
+    def enhance_post_images(self, posts, blog_settings=None):
         """Enhance post images with fallbacks and optimization"""
+        # Cache blog settings to avoid multiple API calls
+        if blog_settings is None:
+            blog_settings = self.get_blog_settings_from_ghost()
+            
         for post in posts:
             feature_image = post.get('feature_image')
             
@@ -681,7 +685,6 @@ class GhostNewsletterSender:
                     post['feature_image_small'] = feature_image
             else:
                 # Use blog logo or default image as fallback
-                blog_settings = self.get_blog_settings_from_ghost()
                 post['feature_image_optimized'] = blog_settings.get('logo') or blog_settings.get('cover_image')
                 post['feature_image_small'] = post['feature_image_optimized']
         
@@ -801,9 +804,12 @@ class GhostNewsletterSender:
                 print(f"No posts found in Ghost from the last {days_back} days")
                 return []
             
+            # Get blog settings once to avoid multiple API calls during image enhancement
+            blog_settings = self.get_blog_settings_from_ghost()
+            
             # Apply filtering to all posts
             all_posts = self.filter_posts_by_criteria(all_posts)
-            all_posts = self.enhance_post_images(all_posts)
+            all_posts = self.enhance_post_images(all_posts, blog_settings)
             
             # Build final post list
             final_posts = []
@@ -811,7 +817,7 @@ class GhostNewsletterSender:
             # If we have a featured post, it goes first
             if featured_post:
                 # Enhance the featured post image
-                featured_post = self.enhance_post_images([featured_post])[0]
+                featured_post = self.enhance_post_images([featured_post], blog_settings)[0]
                 final_posts.append(featured_post)
                 featured_post_id = featured_post.get('id')
                 
@@ -883,9 +889,12 @@ class GhostNewsletterSender:
                 print(f"No posts found in Ghost from the last {days_back} days")
                 return []
             
+            # Get blog settings once to avoid multiple API calls during image enhancement
+            blog_settings = self.get_blog_settings_from_ghost()
+            
             # Apply advanced filtering
             posts = self.filter_posts_by_criteria(posts)
-            posts = self.enhance_post_images(posts)
+            posts = self.enhance_post_images(posts, blog_settings)
             
             # Limit to max_posts after filtering
             posts = posts[:max_posts]
