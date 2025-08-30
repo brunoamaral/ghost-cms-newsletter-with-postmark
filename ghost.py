@@ -135,15 +135,77 @@ class GhostNewsletterSender:
                 
                 page += 1
             
-            # Extract email addresses
-            email_addresses = [member['email'] for member in members if member.get('email')]
-            print(f"Found {len(email_addresses)} subscribed members")
+            # Return full member objects instead of just email addresses
+            active_members = [member for member in members if member.get('email')]
+            print(f"Found {len(active_members)} subscribed members")
             
-            return email_addresses
+            return active_members
             
         except Exception as e:
             print(f"Error fetching Ghost members: {e}")
             return []
+
+    def get_ghost_member_by_email(self, email):
+        """Fetch a specific member by email from Ghost Admin API"""
+        try:
+            token = self.generate_ghost_jwt()
+            if not token:
+                return None
+            
+            headers = {
+                'Authorization': f'Ghost {token}',
+                'Content-Type': 'application/json',
+                'Accept-Version': 'v5.0'
+            }
+            
+            # First try to find in members (subscribers)
+            url = f"{self.ghost_admin_url}/ghost/api/admin/members/"
+            params = {
+                'filter': f'email:{email}',
+                'limit': 1
+            }
+            
+            response = requests.get(url, headers=headers, params=params)
+            
+            if response.status_code == 200:
+                data = response.json()
+                members = data.get('members', [])
+                if members:
+                    member = members[0]
+                    print(f"Found member: {member.get('name', 'Unknown')} ({member.get('email', 'Unknown')})")
+                    return member
+            
+            # If not found in members, try users (admins/staff)
+            print(f"Member not found in subscribers, checking admin users...")
+            url = f"{self.ghost_admin_url}/ghost/api/admin/users/"
+            params = {
+                'filter': f'email:{email}',
+                'limit': 1
+            }
+            
+            response = requests.get(url, headers=headers, params=params)
+            
+            if response.status_code == 200:
+                data = response.json()
+                users = data.get('users', [])
+                if users:
+                    user = users[0]
+                    # Convert user object to member-like format
+                    member_like = {
+                        'email': user.get('email', ''),
+                        'name': user.get('name', ''),
+                        'created_at': user.get('created_at', ''),
+                        'status': 'admin'  # Add indicator that this is an admin
+                    }
+                    print(f"Found admin user: {user.get('name', 'Unknown')} ({user.get('email', 'Unknown')})")
+                    return member_like
+            
+            print(f"No member or admin user found with email: {email}")
+            return None
+                
+        except Exception as e:
+            print(f"Error fetching Ghost member by email: {e}")
+            return None
 
     def get_blog_settings_from_ghost(self):
         """Fetch blog settings from Ghost Admin API"""
@@ -922,7 +984,16 @@ class GhostNewsletterSender:
         
         # Clean up any remaining unresolved double-brace variables only (not triple braces)
         # This pattern specifically matches {{word}} but not {{{word}}}
-        rendered = re.sub(r'(?<!\{)\{\{[^{}]+\}\}(?!\})', '', rendered)
+        # But preserve member-specific placeholders for later personalization
+        def cleanup_placeholder(match):
+            placeholder = match.group(0)
+            # Preserve member-specific placeholders
+            if placeholder in ['{{member_name}}', '{{member_email}}', '{{member_created_at}}', '{{subscription_renewal_date}}', '{{manage_subscription_url}}']:
+                print(f"🔍 Preserving member placeholder in cleanup: {placeholder}")
+                return placeholder
+            return ''
+        
+        rendered = re.sub(r'(?<!\{)\{\{[^{}]+\}\}(?!\})', cleanup_placeholder, rendered)
         
         return rendered
 
@@ -1424,6 +1495,15 @@ class GhostNewsletterSender:
             print(f"Error generating unsubscribe link: {e}")
             return f'{self.ghost_website_url}/#/portal/account/newsletters'
 
+    def get_manage_subscription_url(self):
+        """Generate URL for managing subscription preferences"""
+        try:
+            # Use Ghost's built-in portal account management system
+            return f'{self.ghost_website_url}/#/portal/account'
+        except Exception as e:
+            print(f"Error generating manage subscription URL: {e}")
+            return f'{self.ghost_website_url}/#/portal/account'
+
     def render_newsletter_template(self, template, newsletter_data):
         """Render the email template with newsletter data using the new template system"""
         try:
@@ -1502,12 +1582,13 @@ class GhostNewsletterSender:
                     'support_address': newsletter_data['email']['support_address']
                 },
                 
-                # Member/Subscription details (with fallback for debug)
-                'member_name': 'Jamie Larson',  # Sample data for debug
-                'member_email': 'jamie@example.com',  # Sample data for debug
-                'member_created_at': '17 July 2023',  # Sample data for debug
-                'subscription_renewal_date': '17 Jul 2024',  # Sample data for debug
-                'manage_subscription_url': '#manage-subscription',  # Sample URL for debug
+                # Member/Subscription details - keep as placeholders for personalization
+                # (These will be replaced per-email in personalize_newsletter_for_member)
+                'member_name': '{{member_name}}',
+                'member_email': '{{member_email}}',
+                'member_created_at': '{{member_created_at}}',
+                'subscription_renewal_date': '{{subscription_renewal_date}}',
+                'manage_subscription_url': self.get_manage_subscription_url(),
                 
                 # Phase 3 Enhanced Features
                 'social_twitter_url': newsletter_data['newsletter']['social_sharing'].get('twitter_url', ''),
@@ -1546,6 +1627,9 @@ class GhostNewsletterSender:
                 """Replace template variables including nested objects"""
                 import re
                 
+                # Member-specific variables to exclude from template replacement
+                member_specific_vars = ['member_name', 'member_email', 'member_created_at', 'subscription_renewal_date']
+                
                 # Handle simple conditionals first ({{#if variable}})
                 if_pattern = r'\{\{#if\s+([^}]+)\}\}(.*?)\{\{/if\}\}'
                 
@@ -1564,12 +1648,19 @@ class GhostNewsletterSender:
                 for key, value in data.items():
                     current_path = f"{prefix}.{key}" if prefix else key
                     
+                    # Skip member-specific variables that are placeholder strings
+                    if current_path in member_specific_vars and isinstance(value, str) and value.startswith('{{') and value.endswith('}}'):
+                        print(f"🔍 Preserving member placeholder: {current_path} = {value}")
+                        continue
+                    
                     if isinstance(value, dict):
                         # Recursively handle nested objects
                         text = replace_nested_template_vars(text, value, current_path)
                     else:
                         # Replace the template variable
                         placeholder = '{{' + current_path + '}}'
+                        if placeholder in ['{{member_name}}', '{{member_email}}', '{{member_created_at}}', '{{subscription_renewal_date}}']:
+                            print(f"🚨 WARNING: About to replace member variable {placeholder}")
                         text = text.replace(placeholder, str(value) if value is not None else '')
                 
                 return text
@@ -1608,10 +1699,16 @@ class GhostNewsletterSender:
                     print("🐛 Template still contains: {{blog.icon}}")
             
             # Replace template variables (legacy compatibility)
+            member_specific_vars = ['member_name', 'member_email', 'member_created_at', 'subscription_renewal_date']
+            
             for key, value in template_data.items():
                 if key == 'posts':  # Skip the posts array used for conditionals
                     continue
                 if isinstance(value, dict):  # Skip nested objects (already handled above)
+                    continue
+                if key in member_specific_vars and isinstance(value, str) and value.startswith('{{') and value.endswith('}}'):
+                    # Skip member-specific variables that are placeholder strings
+                    print(f"🔍 Preserving member placeholder in template loop: {key} = {value}")
                     continue
                     
                 if key in ['featured_content', 'additional_posts_content']:
@@ -1621,6 +1718,8 @@ class GhostNewsletterSender:
                 else:
                     # Handle double braces for escaped content
                     placeholder = '{{' + key + '}}'
+                    if placeholder in ['{{member_name}}', '{{member_email}}', '{{member_created_at}}', '{{subscription_renewal_date}}']:
+                        print(f"🚨 WARNING: About to replace member placeholder {placeholder} in template loop")
                     rendered = rendered.replace(placeholder, str(value) if value else '')
             
             return rendered
@@ -1630,6 +1729,93 @@ class GhostNewsletterSender:
             import traceback
             traceback.print_exc()
             return None
+
+    def personalize_newsletter_for_member(self, email_content, member):
+        """Personalize newsletter content with specific member data"""
+        try:
+            # Debug: Check if placeholders exist before replacement
+            if '{{member_name}}' in email_content:
+                print("✅ {{member_name}} placeholder found in content")
+            else:
+                print("❌ {{member_name}} placeholder NOT found in content")
+                
+            # Check what's around the Name field before replacement
+            name_pos = email_content.find('<strong>Name:</strong>')
+            if name_pos != -1:
+                start = max(0, name_pos - 20)
+                end = min(len(email_content), name_pos + 80)
+                context = email_content[start:end]
+                print(f"🔍 BEFORE replacement: {repr(context)}")
+            
+            # Format member creation date
+            member_created_at = member.get('created_at', '')
+            if member_created_at:
+                from datetime import datetime
+                try:
+                    # Parse ISO format from Ghost API
+                    created_date = datetime.fromisoformat(member_created_at.replace('Z', '+00:00'))
+                    formatted_date = created_date.strftime('%d %B %Y')
+                except:
+                    formatted_date = member_created_at
+            else:
+                formatted_date = 'Unknown'
+            
+            # Calculate subscription renewal date (1 year from creation)
+            renewal_date = 'N/A'
+            if member_created_at:
+                try:
+                    created_date = datetime.fromisoformat(member_created_at.replace('Z', '+00:00'))
+                    renewal_date_obj = created_date.replace(year=created_date.year + 1)
+                    renewal_date = renewal_date_obj.strftime('%d %b %Y')
+                except:
+                    pass
+            
+            # Replace member-specific placeholders
+            personalized_content = email_content
+            member_name = member.get('name', 'Subscriber')
+            member_email = member.get('email', '')
+            
+            print(f"🔍 Debug member data:")
+            print(f"   member_name type: {type(member_name)}")
+            print(f"   member_name repr: {repr(member_name)}")
+            print(f"   member_name length: {len(member_name) if member_name else 'None'}")
+            
+            personalized_content = personalized_content.replace('{{member_name}}', member_name)
+            personalized_content = personalized_content.replace('{{member_email}}', member_email)
+            personalized_content = personalized_content.replace('{{member_created_at}}', formatted_date)
+            personalized_content = personalized_content.replace('{{subscription_renewal_date}}', renewal_date)
+            
+            # Debug: Check the specific Name context after replacement
+            name_pos = personalized_content.find('<strong>Name:</strong>')
+            if name_pos != -1:
+                start = max(0, name_pos - 20)
+                end = min(len(personalized_content), name_pos + 80)
+                context = personalized_content[start:end]
+                print(f"🔍 Context after replacement: {repr(context)}")
+            else:
+                print("🔍 Could not find Name field in content")
+            
+            # Debug check: verify the replacement worked
+            print(f"🔍 Checking replacement for 'Name:' in content...")
+            name_context = ""
+            lines = personalized_content.split('\n')
+            for line in lines:
+                if 'Name:' in line:
+                    name_context = line.strip()
+                    print(f"🔍 Found Name line: '{name_context}'")
+                    break
+            
+            # Check if replacements were made
+            if '{{member_name}}' in personalized_content:
+                print("⚠️ Warning: {{member_name}} placeholder still exists in content")
+            else:
+                print("✅ {{member_name}} placeholder was replaced")
+            
+            return personalized_content
+            
+        except Exception as e:
+            print(f"Error personalizing newsletter for member: {e}")
+            return email_content
 
     def render_template(self, template, post):
         """Render the email template with post data"""
@@ -1815,10 +2001,19 @@ class GhostNewsletterSender:
             # Save rendered content for debugging if in dry run mode
             if dry_run:
                 try:
+                    # Use actual test member data if available
+                    test_email = self.ghost_test_email or self.from_email
+                    debug_member = self.get_ghost_member_by_email(test_email)
+                    if not debug_member:
+                        # Fallback to mock data if member not found
+                        debug_member = {'email': test_email, 'name': 'Debug User', 'created_at': '2024-01-01T00:00:00Z'}
+                    
+                    debug_content = self.personalize_newsletter_for_member(email_content, debug_member)
+                    
                     script_dir = os.path.dirname(os.path.realpath(__file__))
                     debug_path = os.path.join(script_dir, 'debug_newsletter.html')
                     with open(debug_path, 'w', encoding='utf-8') as f:
-                        f.write(email_content.replace('{{unsubscribe_url}}', '#unsubscribe'))
+                        f.write(debug_content.replace('{{unsubscribe_url}}', '#unsubscribe'))
                     print(f"🐛 Debug: Rendered newsletter saved to {debug_path}")
                 except Exception as e:
                     print(f"Warning: Could not save debug file: {e}")
@@ -1828,39 +2023,56 @@ class GhostNewsletterSender:
             if dry_run:
                 print("🧪 DRY RUN MODE - Using test email")
                 test_email = self.ghost_test_email or self.from_email
-                email_addresses = [test_email]
+                # Try to fetch the actual member data for the test email
+                test_member = self.get_ghost_member_by_email(test_email)
+                if test_member:
+                    members = [test_member]
+                    print(f"✅ Using actual member data for: {test_member.get('name', 'Unknown')} ({test_email})")
+                else:
+                    # Fallback to mock data if member not found
+                    print(f"⚠️ Member not found for {test_email}, using mock data")
+                    members = [{'email': test_email, 'name': 'Test User', 'created_at': '2024-01-01T00:00:00Z'}]
             else:
-                email_addresses = self.get_ghost_members()
+                members = self.get_ghost_members()
                 
-            if not email_addresses:
+            if not members:
                 print("No subscribers found. Exiting.")
                 return False
             
-            print(f"📬 Sending to {len(email_addresses)} recipients...")
+            print(f"📬 Sending to {len(members)} recipients...")
             
             # Send emails
             sent_count = 0
             failed_count = 0
             
-            for email_addr in email_addresses:
+            for member in members:
                 try:
+                    # Get member email
+                    member_email = member.get('email', '')
+                    if not member_email:
+                        print(f"Skipping member with no email: {member}")
+                        continue
+                    
                     # Generate personalized unsubscribe link
-                    unsubscribe_link = self.generate_unsubscribe_link(email_addr)
-                    personal_content = email_content.replace('{{unsubscribe_url}}', unsubscribe_link)
+                    unsubscribe_link = self.generate_unsubscribe_link(member_email)
+                    
+                    # Personalize content with member data
+                    personal_content = self.personalize_newsletter_for_member(email_content, member)
+                    personal_content = personal_content.replace('{{unsubscribe_url}}', unsubscribe_link)
                     
                     # Send email
                     newsletter_name = f"{newsletter_data['blog']['title']}"
                     email_subject = f"{newsletter_name}: {featured_post_title}"
-                    if self.send_email(email_addr, personal_content, email_subject):
+                    if self.send_email(member_email, personal_content, email_subject):
                         sent_count += 1
-                        print(f"Sent to {email_addr}")
+                        print(f"Sent to {member_email} ({member.get('name', 'Unknown')})")
                     else:
                         failed_count += 1
-                        print(f"Failed to send to {email_addr}")
+                        print(f"Failed to send to {member_email}")
                         
                 except Exception as e:
                     failed_count += 1
-                    print(f"Error sending to {email_addr}: {e}")
+                    print(f"Error sending to {member.get('email', 'unknown')}: {e}")
             
             print(f"📊 Newsletter sending complete:")
             print(f"   Sent: {sent_count}")
