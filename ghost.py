@@ -663,6 +663,117 @@ class GhostNewsletterSender:
             'comment_url': f"{base_url}/{post_slug}/#ghost-comments-root"
         }
 
+    def get_prioritized_posts_for_newsletter(self, max_posts=5, days_back=30):
+        """Fetch posts with featured post prioritization from last 7 days"""
+        try:
+            if not self.ghost_content_api_key:
+                print("Ghost Content API key not found")
+                return []
+            
+            # Auto-interval detection
+            if self.auto_interval:
+                days_back = self.detect_optimal_interval()
+                print(f"🤖 Auto-detected interval: {days_back} days")
+            
+            from datetime import datetime, timedelta
+            
+            # First, look for featured posts in the last 7 days
+            featured_cutoff = datetime.now() - timedelta(days=7)
+            featured_date_filter = featured_cutoff.strftime('%Y-%m-%d')
+            
+            # Build the API URL
+            base_url = self.ghost_admin_url.replace('/ghost/api/admin', '')
+            url = f"{base_url}/ghost/api/content/posts/"
+            
+            headers = {
+                'Accept-Version': 'v5.0'
+            }
+            
+            # Search for featured posts in last 7 days
+            featured_params = {
+                'key': self.ghost_content_api_key,
+                'limit': 50,  # Higher limit to find featured posts
+                'order': 'published_at desc',
+                'include': 'tags,authors',
+                'formats': 'html,plaintext',
+                'filter': f'published_at:>={featured_date_filter}+featured:true'
+            }
+            
+            print("🔍 Looking for featured posts in the last 7 days...")
+            featured_response = requests.get(url, headers=headers, params=featured_params)
+            featured_post = None
+            
+            if featured_response.status_code == 200:
+                featured_data = featured_response.json()
+                featured_posts = featured_data.get('posts', [])
+                if featured_posts:
+                    # Apply filtering to featured posts
+                    filtered_featured = self.filter_posts_by_criteria(featured_posts)
+                    if filtered_featured:
+                        featured_post = filtered_featured[0]  # Use the most recent featured post
+                        print(f"✨ Found featured post: '{featured_post.get('title', 'Untitled')}'")
+            
+            # Now get regular posts from the specified time period
+            regular_cutoff = datetime.now() - timedelta(days=days_back)
+            regular_date_filter = regular_cutoff.strftime('%Y-%m-%d')
+            
+            regular_params = {
+                'key': self.ghost_content_api_key,
+                'limit': max_posts + 10,  # Get more posts to filter from
+                'order': 'published_at desc',
+                'include': 'tags,authors',
+                'formats': 'html,plaintext',
+                'filter': f'published_at:>={regular_date_filter}'
+            }
+            
+            response = requests.get(url, headers=headers, params=regular_params)
+            
+            if response.status_code != 200:
+                print(f"Error fetching posts from Ghost API: {response.status_code} - {response.text}")
+                return []
+            
+            data = response.json()
+            all_posts = data.get('posts', [])
+            
+            if not all_posts and not featured_post:
+                print(f"No posts found in Ghost from the last {days_back} days")
+                return []
+            
+            # Apply filtering to all posts
+            all_posts = self.filter_posts_by_criteria(all_posts)
+            all_posts = self.enhance_post_images(all_posts)
+            
+            # Build final post list
+            final_posts = []
+            
+            # If we have a featured post, it goes first
+            if featured_post:
+                # Enhance the featured post image
+                featured_post = self.enhance_post_images([featured_post])[0]
+                final_posts.append(featured_post)
+                featured_post_id = featured_post.get('id')
+                
+                # Add other posts, excluding the featured post
+                for post in all_posts:
+                    if post.get('id') != featured_post_id and len(final_posts) < max_posts:
+                        final_posts.append(post)
+            else:
+                # No featured post found, use regular ordering
+                final_posts = all_posts[:max_posts]
+            
+            print(f"Found {len(final_posts)} posts for newsletter:")
+            for i, post in enumerate(final_posts):
+                tags = ', '.join([tag.get('name', '') for tag in post.get('tags', [])])
+                featured = " [FEATURED]" if post.get('featured') else ""
+                post_type = "Main post" if i == 0 else "Keep reading"
+                print(f"  - {post.get('title', 'Untitled')}{featured} (tags: {tags}) [{post_type}]")
+            
+            return final_posts
+            
+        except Exception as e:
+            print(f"Error fetching posts from Ghost API: {e}")
+            return []
+
     def get_recent_posts_from_ghost(self, max_posts=5, days_back=30):
         """Fetch recent posts from Ghost Content API with enhanced filtering"""
         try:
@@ -1087,6 +1198,14 @@ class GhostNewsletterSender:
             # Style links
             for a_tag in soup.find_all('a'):
                 a_tag['style'] = "color: #007bff; text-decoration: none; font-weight: 500;"
+            
+            # Style blockquotes
+            for blockquote in soup.find_all('blockquote'):
+                blockquote['style'] = "font-family: Inter, -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif; font-size: 18px; font-style: italic; margin: 24px 0; padding: 20px 24px; background-color: #f8f9fa; border-left: 4px solid #dee2e6; line-height: 1.6; color: #495057; border-radius: 0 6px 6px 0;"
+                
+                # Style paragraphs within blockquotes differently
+                for p in blockquote.find_all('p'):
+                    p['style'] = "font-family: Inter, -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif; font-size: 18px; font-style: italic; margin: 0 0 12px 0; line-height: 1.6; color: #495057;"
             
             # Style figure captions
             for figcaption in soup.find_all('figcaption'):
@@ -1648,9 +1767,9 @@ class GhostNewsletterSender:
         try:
             print("🚀 Starting Ghost newsletter sender...")
             
-            # Get recent posts
+            # Get recent posts with featured post prioritization
             print(f"📰 Fetching up to {self.max_posts} posts from the last {self.days_back} days...")
-            recent_posts = self.get_recent_posts_from_ghost(self.max_posts, self.days_back)
+            recent_posts = self.get_prioritized_posts_for_newsletter(self.max_posts, self.days_back)
             if not recent_posts:
                 print("No posts found. Exiting.")
                 return False
@@ -1731,7 +1850,7 @@ class GhostNewsletterSender:
                     
                     # Send email
                     newsletter_name = f"{newsletter_data['blog']['title']}"
-                    email_subject = f"{featured_post_title}"
+                    email_subject = f"{newsletter_name}: {featured_post_title}"
                     if self.send_email(email_addr, personal_content, email_subject):
                         sent_count += 1
                         print(f"Sent to {email_addr}")
