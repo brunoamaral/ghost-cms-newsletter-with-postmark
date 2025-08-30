@@ -94,11 +94,15 @@ class GhostNewsletterSender:
             return None
 
     def get_ghost_members(self):
-        """Fetch active members from Ghost Admin API"""
+        """Fetch all members and filter by specific newsletter subscription"""
         try:
             token = self.generate_ghost_jwt()
             if not token:
                 return []
+            
+            newsletter_id = os.getenv('GHOST_NEWSLETTER_ID')
+            if not newsletter_id:
+                print("⚠️ Warning: GHOST_NEWSLETTER_ID not set, fetching all subscribed members")
             
             headers = {
                 'Authorization': f'Ghost {token}',
@@ -107,16 +111,19 @@ class GhostNewsletterSender:
             }
             
             # Fetch all members with pagination
-            members = []
+            all_members = []
             page = 1
             limit = 100
+            
+            print(f"📧 Fetching all members to check newsletter subscriptions...")
             
             while True:
                 url = f"{self.ghost_admin_url}/ghost/api/admin/members/"
                 params = {
                     'limit': limit,
                     'page': page,
-                    'filter': 'subscribed:true'  # Only get subscribed members
+                    'include': 'newsletters',  # Include newsletter subscription data
+                    'filter': 'subscribed:true'  # Only get generally subscribed members
                 }
                 
                 response = requests.get(url, headers=headers, params=params)
@@ -126,7 +133,8 @@ class GhostNewsletterSender:
                     break
                 
                 data = response.json()
-                members.extend(data.get('members', []))
+                page_members = data.get('members', [])
+                all_members.extend(page_members)
                 
                 # Check if there are more pages
                 pagination = data.get('meta', {}).get('pagination', {})
@@ -135,11 +143,35 @@ class GhostNewsletterSender:
                 
                 page += 1
             
-            # Return full member objects instead of just email addresses
-            active_members = [member for member in members if member.get('email')]
-            print(f"Found {len(active_members)} subscribed members")
+            print(f"📊 Fetched {len(all_members)} total subscribed members")
             
-            return active_members
+            # Now filter by specific newsletter subscription
+            newsletter_subscribers = []
+            
+            if newsletter_id:
+                print(f"🎯 Filtering for newsletter ID: {newsletter_id}")
+                
+                for member in all_members:
+                    member_newsletters = member.get('newsletters', [])
+                    
+                    # Check if member is subscribed to our specific newsletter
+                    # The newsletters array contains only subscribed newsletters
+                    is_newsletter_subscriber = False
+                    for newsletter in member_newsletters:
+                        if newsletter.get('id') == newsletter_id:
+                            is_newsletter_subscriber = True
+                            break
+                    
+                    if is_newsletter_subscriber:
+                        newsletter_subscribers.append(member)
+                        
+                print(f"✅ Found {len(newsletter_subscribers)} members subscribed to newsletter '{newsletter_id}'")
+                return newsletter_subscribers
+            else:
+                # If no newsletter ID specified, return all subscribed members
+                active_members = [member for member in all_members if member.get('email')]
+                print(f"Found {len(active_members)} subscribed members")
+                return active_members
             
         except Exception as e:
             print(f"Error fetching Ghost members: {e}")
