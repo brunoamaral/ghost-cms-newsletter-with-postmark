@@ -1312,6 +1312,16 @@ class GhostNewsletterSender:
             for a_tag in soup.find_all('a'):
                 a_tag['style'] = "color: #007bff; text-decoration: none; font-weight: 500;"
             
+            # Style lists (ul/ol) and list items (li)
+            ul_style = "font-family: Inter, -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif; margin: 16px 0; padding-left: 20px; color: #495057;"
+            li_style = "font-family: Inter, -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif; font-size: 18px; font-weight: normal; margin: 0 0 8px 0; line-height: 1.6; color: #495057;"
+            
+            for ul_tag in soup.find_all(['ul', 'ol']):
+                ul_tag['style'] = ul_style
+                
+            for li_tag in soup.find_all('li'):
+                li_tag['style'] = li_style
+            
             # Style blockquotes
             for blockquote in soup.find_all('blockquote'):
                 blockquote['style'] = "font-family: Inter, -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif; font-size: 18px; font-style: italic; margin: 24px 0; padding: 20px 24px; background-color: #f8f9fa; border-left: 4px solid #dee2e6; line-height: 1.6; color: #495057; border-radius: 0 6px 6px 0;"
