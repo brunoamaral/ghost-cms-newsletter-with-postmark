@@ -1125,16 +1125,15 @@ class GhostNewsletterSender:
                 first_tag = tags[0].get('name') if tags else 'General'
                 first_author = authors[0].get('name') if authors else self.from_name
                 
-                # Generate excerpt - use Ghost's excerpt or create from plaintext
-                excerpt = post.get('excerpt', '')
-                if not excerpt and post.get('plaintext'):
-                    excerpt = post.get('plaintext', '')[:200] + '...' if len(post.get('plaintext', '')) > 200 else post.get('plaintext', '')
+                # Use custom_excerpt only - omit if author didn't explicitly set one
+                # (Ghost's 'excerpt' field auto-generates from content, which we don't want)
+                custom_excerpt = post.get('custom_excerpt', '') or ''
                 
                 # Process content for featured post (first post gets full HTML, others get excerpt)
                 if i == 0:  # Featured post
                     content = self.process_content(post.get('html', ''))
                 else:  # Regular posts get excerpt only
-                    content = excerpt
+                    content = post.get('excerpt', '') or ''
                 
                 processed_post = {
                     'title': post.get('title', 'Untitled'),
@@ -1143,7 +1142,7 @@ class GhostNewsletterSender:
                     'tag': first_tag,
                     'author': first_author,
                     'picture': post.get('feature_image', ''),
-                    'excerpt': excerpt,
+                    'excerpt': custom_excerpt,
                     'published_at': post.get('published_at', ''),
                     'raw_html': post.get('html', ''),
                     'plaintext': post.get('plaintext', '')
@@ -1584,7 +1583,7 @@ class GhostNewsletterSender:
                 'newsletter_date': newsletter_data['newsletter']['date'],
                 'newsletter_preview': featured_post.get('excerpt', '')[:100] + '...' if featured_post.get('excerpt') else '',
                 'featured_title': featured_post.get('title', ''),
-                'featured_excerpt': featured_post.get('excerpt', ''),
+                'featured_excerpt': featured_post.get('excerpt', ''),  # Now uses custom_excerpt only
                 'featured_content': featured_post.get('text', ''),
                 'featured_url': featured_post.get('url', ''),
                 'featured_tag': featured_post.get('tag', ''),
