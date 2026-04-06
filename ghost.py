@@ -2,6 +2,7 @@
 
 from bs4 import BeautifulSoup
 import argparse
+import builtins
 import datetime
 import jwt
 import os
@@ -14,9 +15,57 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+VERBOSITY = 1
+IMPORTANT_LOG_HINTS = (
+    'error',
+    'failed',
+    'fatal',
+    'warning',
+    'missing',
+    'invalid',
+    'exiting',
+    'no posts found',
+    'no subscribers found',
+    'not found'
+)
+
+
+def _normalize_verbosity(value):
+    try:
+        return max(0, min(3, int(value)))
+    except (TypeError, ValueError):
+        return 1
+
+
+def set_verbosity(level):
+    global VERBOSITY
+    VERBOSITY = _normalize_verbosity(level)
+
+
+def _message_is_important(message):
+    lowered = message.lower()
+    return any(hint in lowered for hint in IMPORTANT_LOG_HINTS)
+
+
+def print(*args, **kwargs):
+    """Global print gate for controllable script verbosity."""
+    message = ' '.join(str(arg) for arg in args)
+    if VERBOSITY >= 1 or _message_is_important(message):
+        builtins.print(*args, **kwargs)
+
+
+def vprint(level, *args, **kwargs):
+    """Verbose print helper for optional diagnostic output."""
+    if VERBOSITY >= level:
+        builtins.print(*args, **kwargs)
+
+
+set_verbosity(os.getenv('VERBOSITY', 1))
+
 class GhostNewsletterSender:
     def __init__(self, max_posts=5, days_back=30, newsletter_interval='weekly', 
-                 filter_tags=None, featured_only=False, auto_interval=False):
+                 filter_tags=None, featured_only=False, auto_interval=False,
+                 featured_slug=None):
         # Newsletter configuration
         self.max_posts = max_posts
         self.days_back = days_back
@@ -24,6 +73,7 @@ class GhostNewsletterSender:
         self.filter_tags = filter_tags or []
         self.featured_only = featured_only
         self.auto_interval = auto_interval
+        self.featured_slug = featured_slug.strip().lower() if featured_slug else None
         
         # Load environment variables with explicit path
         script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -845,17 +895,45 @@ class GhostNewsletterSender:
             
             # Build final post list
             final_posts = []
+            selected_featured_post = featured_post
+
+            if self.featured_slug:
+                slug_match = next(
+                    (post for post in all_posts if (post.get('slug') or '').lower() == self.featured_slug),
+                    None
+                )
+
+                if not slug_match and featured_post:
+                    featured_slug = (featured_post.get('slug') or '').lower()
+                    if featured_slug == self.featured_slug:
+                        slug_match = featured_post
+
+                if slug_match:
+                    selected_featured_post = slug_match
+                    vprint(1, f"⭐ Using featured post override by slug: '{slug_match.get('slug', '')}'")
+                else:
+                    vprint(1, f"⚠️ Featured slug '{self.featured_slug}' not found, falling back to auto selection")
             
             # If we have a featured post, it goes first
-            if featured_post:
-                # Enhance the featured post image
-                featured_post = self.enhance_post_images([featured_post], blog_settings)[0]
-                final_posts.append(featured_post)
-                featured_post_id = featured_post.get('id')
+            if selected_featured_post:
+                selected_featured_post_id = selected_featured_post.get('id')
+
+                # If the selected featured post already exists in all_posts, use that enhanced instance.
+                selected_from_all = next(
+                    (post for post in all_posts if post.get('id') == selected_featured_post_id),
+                    None
+                )
+
+                if selected_from_all:
+                    selected_featured_post = selected_from_all
+                else:
+                    selected_featured_post = self.enhance_post_images([selected_featured_post], blog_settings)[0]
+
+                final_posts.append(selected_featured_post)
                 
                 # Add other posts, excluding the featured post
                 for post in all_posts:
-                    if post.get('id') != featured_post_id and len(final_posts) < max_posts:
+                    if post.get('id') != selected_featured_post_id and len(final_posts) < max_posts:
                         final_posts.append(post)
             else:
                 # No featured post found, use regular ordering
@@ -2157,6 +2235,8 @@ def main():
         parser.add_argument('--auto-interval', action='store_true', help='Auto-detect optimal newsletter interval based on posting frequency')
         parser.add_argument('--featured-only', action='store_true', help='Include only featured posts')
         parser.add_argument('--filter-tags', nargs='+', help='Filter posts by tags (space-separated list)')
+        parser.add_argument('--featured-slug', type=str, help='Force a specific post slug to be featured first (fallback to auto if not found)')
+        parser.add_argument('--verbosity', type=int, choices=[0, 1, 2, 3], default=_normalize_verbosity(os.getenv('VERBOSITY', 1)), help='Output verbosity: 0=quiet, 1=normal, 2=verbose, 3=debug')
         
         # Testing and debugging options
         parser.add_argument('--check-branding', action='store_true', help='Check available branding and design settings from Ghost API')
@@ -2165,6 +2245,7 @@ def main():
         parser.add_argument('--analyze-branding', action='store_true', help='Comprehensive analysis of branding capabilities and recommendations')
         
         args = parser.parse_args()
+        set_verbosity(args.verbosity)
         
         # Create newsletter sender with configuration
         sender = GhostNewsletterSender(
@@ -2173,7 +2254,8 @@ def main():
             newsletter_interval=args.interval,
             filter_tags=args.filter_tags,
             featured_only=args.featured_only,
-            auto_interval=args.auto_interval
+            auto_interval=args.auto_interval,
+            featured_slug=args.featured_slug
         )
         
         # Check branding settings if requested

@@ -1,0 +1,18 @@
+[project]
+name = "ghost-newsletter-with-postmark"
+version = "0.1.0"
+description = "Ghost CMS newsletter sender using Postmark"
+requires-python = ">=3.11"
+dependencies = [
+  "beautifulsoup4>=4.12.0",
+  "pyjwt>=2.8.0",
+  "requests>=2.31.0",
+  "python-dotenv>=1.0.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.24.0"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = false

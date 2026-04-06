@@ -123,13 +123,13 @@ The newsletter script uses these branding settings:
 
 ```bash
 # Check basic branding settings
-python3 ghost.py --check-branding
+uv run python ghost.py --check-branding
 
 # Check theme information
-python3 ghost.py --check-theme
+uv run python ghost.py --check-theme
 
 # Comprehensive branding analysis
-python3 ghost.py --analyze-branding
+uv run python ghost.py --analyze-branding
 ```
 
 ## Recommendations

@@ -14,20 +14,41 @@ This script uses the Ghost CMS and Postmark APIs to fetch the latest blog post, 
 ## Usage
 
 1. Edit the `.env` file following the example, and optionally: Edit the html template located at `templates/ghost/newsletter.html`.
-2. Run `python ghost.py`. You may want to automate it to run at every new post, but that would require some way to track new posts.
+2. Run `uv run python ghost.py`. You may want to automate it to run at every new post, but that would require some way to track new posts.
 
 ### Basic Commands
 
 ```bash
 # Dry run (sends test email only)
-python3 ghost.py
+uv run python ghost.py
 
 # Send to all subscribers
-python3 ghost.py --send
+uv run python ghost.py --send
+
+# Reduce output (errors and warnings only)
+uv run python ghost.py --verbosity 0
+
+# More detailed output for debugging
+uv run python ghost.py --verbosity 2
+
+# Force a specific post as featured (fallback to auto selection if missing)
+uv run python ghost.py --featured-slug your-post-slug
 
 # View help
-python3 ghost.py --help
+uv run python ghost.py --help
 ```
+
+### New CLI Options
+
+- `--verbosity {0,1,2,3}`
+  - `0`: quiet mode (important warnings/errors only)
+  - `1`: normal mode (default)
+  - `2`: verbose mode
+  - `3`: debug mode
+- `--featured-slug <slug>`
+  - Promotes the matching post slug to the featured slot in the newsletter
+  - If no post matches, the script falls back to the existing automatic featured selection
+
 
 Features:
 - Fetch the latest post from your Ghost CMS
@@ -47,7 +68,7 @@ Features:
 ```
 scripts/
 ├── ghost.py                           # Main newsletter sender script
-├── requirements-ghost.txt             # Python dependencies
+├── pyproject.toml                     # Python project metadata and dependencies
 ├── .env                              # Environment variables (create from .env.example)
 ├── templates/
 │   └── ghost/
@@ -58,7 +79,7 @@ scripts/
 ### File Descriptions
 
 - **`ghost.py`** - The main Python script that handles Ghost API integration, email rendering, and newsletter sending
-- **`requirements-ghost.txt`** - Lists all Python package dependencies needed to run the script
+- **`pyproject.toml`** - Defines Python dependencies for uv-managed runs
 - **`.env`** - Contains sensitive configuration data (API keys, email credentials, etc.)
 - **`templates/ghost/newsletter.html`** - Modern, responsive email template with inline CSS for email client compatibility
 
@@ -73,7 +94,13 @@ scripts/
 ### 1. Install Dependencies
 
 ```bash
-pip install -r requirements-ghost.txt
+uv sync
+```
+
+Or run directly without syncing first:
+
+```bash
+uv run python ghost.py --help
 ```
 
 ### 2. Configure Environment Variables
@@ -139,9 +166,9 @@ The script uses `templates/ghost/newsletter.html` which includes:
 
 ### Workflow
 
-1. **Dry Run First**: Always test with `python3 ghost.py` to send to your test email
+1. **Dry Run First**: Always test with `uv run python ghost.py` to send to your test email
 2. **Review Email**: Check formatting, content, and links in the test email
-3. **Send to All**: Use `python3 ghost.py --send` to send to all subscribers
+3. **Send to All**: Use `uv run python ghost.py --send` to send to all subscribers
 
 ## Configuration Options
 
