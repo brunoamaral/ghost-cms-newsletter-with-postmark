@@ -1398,6 +1398,24 @@ class GhostNewsletterSender:
                 
             for li_tag in soup.find_all('li'):
                 li_tag['style'] = li_style
+
+            # Style code blocks for email clients (body has line-height: 0 in template)
+            pre_style = "font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace; font-size: 14px; line-height: 1.5; color: #e9ecef; background-color: #1f2937; margin: 20px 0; padding: 14px 16px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; word-break: break-word;"
+            code_block_style = "font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace; font-size: 14px; line-height: 1.5; color: #e9ecef; background-color: transparent; white-space: pre-wrap; word-break: break-word;"
+            inline_code_style = "font-family: SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace; font-size: 0.9em; line-height: 1.4; color: #d63384; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 0.1em 0.35em;"
+
+            for pre_tag in soup.find_all('pre'):
+                pre_tag['style'] = pre_style
+                # Ensure line wrapping remains readable in strict email clients.
+                for child in pre_tag.find_all(True):
+                    existing_style = child.get('style', '')
+                    child['style'] = f"{existing_style}; line-height: 1.5; white-space: pre-wrap;".strip('; ')
+
+            for code_tag in soup.find_all('code'):
+                if code_tag.find_parent('pre'):
+                    code_tag['style'] = code_block_style
+                else:
+                    code_tag['style'] = inline_code_style
             
             # Style blockquotes
             for blockquote in soup.find_all('blockquote'):
